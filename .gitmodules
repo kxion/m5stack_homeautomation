@@ -1,0 +1,12 @@
+[submodule "components/arduino"]
+	path = components/arduino
+	url = https://github.com/espressif/arduino-esp32.git
+[submodule "components/m5stack"]
+	path = components/m5stack
+  url = https://github.com/m5stack/m5stack.git
+[submodule "components/cfGUI"]
+  path = components/cfGUI
+  url = https://github.com/JF002/cfGUI.git
+[submodule "components/curl"]
+  path = components/curl
+  url = https://github.com/curl/curl.git
