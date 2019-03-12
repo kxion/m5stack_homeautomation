@@ -10,6 +10,7 @@
 #include "mqtt.h"
 #include "temparature.h"
 #include "outlet.h"
+#include "googleSheet.h"
 #include "config.h"
 
 #if CONFIG_FREERTOS_UNICORE
@@ -41,9 +42,11 @@ void setup(){
   wifi_init();
   mqtt_app_start();
   
-  temperature = new mrdunk::Temperature("inside_downstairs");
+  temperature = new mrdunk::Temperature("inside/downstairs/livingroom");
   outletBoiler = new mrdunk::OutletKankun(BOILER_TOPIC, false);
   setupMenu();
+
+  googleSheet_connect(WEB_URL);
 }
 
 // Every 20ms.

@@ -7,6 +7,7 @@
 namespace mrdunk {
 
 #define MAX_PRIORITY 10
+#define PUBLISH_INTERVAL (10 * 60 * 1000)  // 10 minutes
 
 class Outlet {
  public:
@@ -18,8 +19,12 @@ class Outlet {
  protected:
   char* _topicBase;
   const boolean _defaultState;
-  virtual void setState(const boolean state)=0;
   std::vector<char*> topicsAtPriority[MAX_PRIORITY];
+  long unsigned int lastPublishTime;
+  boolean lastPublishState;
+
+  void publish(const boolean state);
+  virtual void setState(const boolean state)=0;
 };
 
 class OutletKankun: public Outlet {

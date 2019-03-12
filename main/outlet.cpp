@@ -8,7 +8,7 @@
 namespace mrdunk{
 
 Outlet::Outlet(const char* topicBase, const boolean defaultState) :
-    _topicBase(strdup(topicBase)), _defaultState(defaultState) {
+    _topicBase(strdup(topicBase)), _defaultState(defaultState), lastPublishTime(0) {
 }
 
 Outlet::~Outlet() {
@@ -39,6 +39,18 @@ void Outlet::addControlSubscription(const char* topic, const uint8_t priority) {
   mqtt_subscribe(topic);
 }
 
+void Outlet::publish(const boolean state) {
+  if(lastPublishState != state ||
+      lastPublishTime == 0 ||
+      lastPublishTime + PUBLISH_INTERVAL < millis()) {
+    lastPublishState = state;
+    lastPublishTime = millis();
+    char payload[30] = "";
+    snprintf(payload, 30, "state:%i", state);
+    mqtt_publish(_topicBase, payload);
+  }
+}
+
 OutletKankun::OutletKankun(const char* topicBase, const boolean defaultState) :
     Outlet(topicBase, defaultState) {
   _httpRequestState = new mrdunk::HttpRequest("http://192.168.192.8/cgi-bin/relay.cgi?state");
@@ -51,9 +63,7 @@ OutletKankun::~OutletKankun() {
 
 void OutletKankun::update() {
   _httpRequestState->get();
-  char payload[30] = "";
-  snprintf(payload, 30, "state:%i", _httpRequestState->match.result);
-  mqtt_publish(_topicBase, payload);
+  publish(_httpRequestState->match.result);
 }
 
 boolean OutletKankun::getState() {

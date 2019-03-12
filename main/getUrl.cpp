@@ -24,6 +24,18 @@ HttpRequest::HttpRequest(const char* url) {
   curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, writeData);
 }
 
+void HttpRequest::curlTest() {
+  curl_version_info_data *data = curl_version_info(CURLVERSION_NOW);
+	ESP_LOGI(tag, "Curl version info");
+	ESP_LOGI(tag, "version: %s - %d", data->version, data->version_num);
+  ESP_LOGI(tag, "Protocols:");
+	int i=0;
+	while(data->protocols[i] != NULL) {
+		ESP_LOGI(tag, "- %s", data->protocols[i]);
+		i++;
+	}
+}
+
 HttpRequest::~HttpRequest() {
   free(_url);
   curl_easy_cleanup(handle);
@@ -42,6 +54,10 @@ uint8_t HttpRequest::get() {
   ESP_LOGW(tag, "curl_easy_perform failed: %s", curl_easy_strerror(res));
   assert(0);
   return 0;
+}
+
+void HttpRequest::setPostFields(const char* postFields) {
+  curl_easy_setopt(handle, CURLOPT_POSTFIELDS, postFields);
 }
 
 size_t HttpRequest::writeData(void *buffer, size_t size, size_t nmemb, void *userp) {

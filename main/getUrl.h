@@ -14,7 +14,9 @@ class HttpRequest {
  public:
   HttpRequest(const char* url);
   ~HttpRequest();
+  void curlTest();
   uint8_t get();
+  void setPostFields(const char* postFields);
   struct Match match;
 
  private:
