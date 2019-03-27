@@ -12,6 +12,7 @@
 #include "outlet.h"
 #include "googleSheet.h"
 #include "config.h"
+#include "getUrl.h"
 
 #if CONFIG_FREERTOS_UNICORE
 #define ARDUINO_RUNNING_CORE 0
@@ -24,12 +25,20 @@
 
 mrdunk::Temperature* temperature;
 mrdunk::OutletKankun* outletBoiler;
+mrdunk::HttpRequest* httpRequest;
 
 // The setup routine runs once when M5Stack starts up
 void setup(){
 
   // Initialize the M5Stack object
   M5.begin(true, false);
+
+  // Networking
+  wifi_init();
+
+  googleSheet_connect(WEB_URL);
+  
+  mqtt_app_start();
 
   // LCD display
   M5.Lcd.clearDisplay();
@@ -38,15 +47,9 @@ void setup(){
   M5.Lcd.setCursor(10, 10);
   M5.Lcd.print("Loading...\n");
 
-  // Networking
-  wifi_init();
-  mqtt_app_start();
-  
   temperature = new mrdunk::Temperature("inside/downstairs/livingroom");
   outletBoiler = new mrdunk::OutletKankun(BOILER_TOPIC, false);
   setupMenu();
-
-  googleSheet_connect(WEB_URL);
 }
 
 // Every 20ms.

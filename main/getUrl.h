@@ -12,10 +12,12 @@ struct Match {
 
 class HttpRequest {
  public:
+  static uint8_t globalInit;
   HttpRequest(const char* url);
   ~HttpRequest();
   void curlTest();
   uint8_t get();
+  uint8_t getHttps();
   void setPostFields(const char* postFields);
   struct Match match;
 
