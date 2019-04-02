@@ -14,7 +14,7 @@ namespace mrdunk {
     const size_t topicLen = strlen(TOPIC_TEMPERATURES) + strlen(_zone) + 4;
     char topic[topicLen];
     snprintf(topic, topicLen, "%s/%s/#", TOPIC_TEMPERATURES, _zone);
-    mqtt_subscribe(topic);
+    assert(mqtt_subscribe(topic));
   }
 
   Temperature::~Temperature() {

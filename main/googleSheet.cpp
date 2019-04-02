@@ -42,7 +42,7 @@ extern const uint8_t google_root_cert_pem_end[]   asm("_binary_google_root_cert_
 
 #define HEADER_LOCATION "Location: "
 
-static char pageBuffer[1024];
+static char pageBuffer[512];
 static char locationBuffer[512];
 
 uint8_t googleSheet_connect(const char* url) {
@@ -88,7 +88,7 @@ uint8_t googleSheet_connect(const char* url) {
     len = sizeof(pageBuffer) - 1 - strlen(pageBuffer);
     ESP_LOGI(TAG, "%d buffer space", len);
     bzero(pageBuffer + strlen(pageBuffer), len + 1);
-    ret = esp_tls_conn_read(tls, pageBuffer, len);
+    ret = esp_tls_conn_read(tls, pageBuffer + strlen(pageBuffer), len);
     if(ret == MBEDTLS_ERR_SSL_WANT_WRITE  || ret == MBEDTLS_ERR_SSL_WANT_READ) {
       continue;
     }
@@ -140,10 +140,17 @@ uint8_t googleSheet_connect(const char* url) {
         doneHeaders = 1;
       }
 
+      ESP_LOGI(TAG, "header:\t%.*s\t=\t%.*s",
+                    lineColon - pageBuffer - 1, pageBuffer,
+                    lineEnd - lineColon, lineColon);
+
       if(strncmp(pageBuffer, HEADER_LOCATION, strlen(HEADER_LOCATION)) == 0) {
         bzero(locationBuffer, sizeof(locationBuffer));
         strncpy(locationBuffer, lineColon, lineEnd - lineColon);
-        ESP_LOGD(TAG, "Location: %i, %s", strlen(locationBuffer), locationBuffer);
+        if(lineEnd - lineColon > sizeof(locationBuffer)) {
+          ESP_LOGW(TAG, "Location larger than buffer. %i vs %i",
+              lineEnd - lineColon, sizeof(locationBuffer));
+        }
       }
 
       memmove(pageBuffer, lineEnd + 2, strlen(lineEnd + 2) + 1);
@@ -154,60 +161,12 @@ uint8_t googleSheet_connect(const char* url) {
       ESP_LOGI(TAG, "HTML content: %s", pageBuffer);
       bzero(pageBuffer, sizeof(pageBuffer));
     }
-
-    /*len = sizeof(pageBuffer) - 1;
-    bzero(pageBuffer, sizeof(pageBuffer));
-    ret = esp_tls_conn_read(tls, (char *)pageBuffer, len);
-
-    if(ret == MBEDTLS_ERR_SSL_WANT_WRITE  || ret == MBEDTLS_ERR_SSL_WANT_READ)
-      continue;
-
-    if(ret < 0)
-    {
-      ESP_LOGE(TAG, "esp_tls_conn_read  returned -0x%x", -ret);
-      break;
-    }
-
-    if(ret == 0)
-    {
-      ESP_LOGI(TAG, "connection closed");
-      break;
-    }
-
-    len = ret;
-    ESP_LOGD(TAG, "%d bytes read", len);
-    ESP_LOGI(TAG, "%d bytes read", len);
-    // Print response directly to stdout as it is read
-    for(int i = 0; i < len; i++) {
-      putchar(pageBuffer[i]);
-    }
-    // Find Status code
-    if(strlen(statusCode) == 0) {
-      for(int i = 0; pageBuffer[i] != '\n'; i++) {
-        if(pageBuffer[i] == ' ') {
-          strncpy(statusCode, &pageBuffer[i + 1], 3);
-          ESP_LOGI(TAG, "statusCode: %s", statusCode);
-          break;
-        }
-      }
-    }
-    // Find redirect location:
-    if(strncmp(statusCode, "302", 3) == 0) {
-      char* locationStart = strstr(pageBuffer, HEADER_LOCATION);
-      if(locationStart != nullptr) {
-        locationStart += strlen(HEADER_LOCATION);
-        char* locationEnd = strstr(locationStart, "X-Content-Type-Options");
-        if(locationEnd != nullptr) {
-          strncpy(locationBuffer, locationStart, (locationEnd - locationStart));
-        }
-      }
-    }*/
   } while(1);
 
   esp_tls_conn_delete(tls);
   
-  ESP_LOGI(TAG, "Performing HTTP redirect...");
   if(strncmp(statusCode, "302", 3) == 0 && strlen(locationBuffer) > 0) {
+    ESP_LOGI(TAG, "Performing HTTP redirect...");
     ESP_LOGI(TAG, "%s", locationBuffer);
     googleSheet_connect(locationBuffer);
   }

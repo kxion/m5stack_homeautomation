@@ -50,6 +50,8 @@ static std::vector<StatusBar::WifiStatuses> wifiStatus {
     StatusBar::WifiStatuses::Full
 };
 
+static uint8_t mqttSubscriptions = 0;
+
 void setupMenu() {
   // Instantiate and configure all widgets
   topBar = new StatusBar();
@@ -154,15 +156,17 @@ void setupMenu() {
     return true;
   });
 
-  // Subscribe to the heating "override" topic so we get updated is any other
-  // controller modifies the value.
-  mqtt_subscribe(HEATING_CONTROL);
-
   // Draw the screen and all its children
   screen->Draw();
 }
 
 void updateMenu() {
+  if(!mqttSubscriptions) {
+      // Subscribe to the heating "override" topic so we get updated is any other
+      // controller modifies the value.
+      mqttSubscriptions = mqtt_subscribe(HEATING_CONTROL);
+  }
+
   int8_t rssi = WiFi.RSSI();
   if(rssi >= -55) {
     topBar->SetWifiStatus(StatusBar::WifiStatuses::Full);

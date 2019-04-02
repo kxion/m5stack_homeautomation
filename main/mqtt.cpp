@@ -22,6 +22,7 @@ static EventGroupHandle_t wifi_event_group;
 const static int CONNECTED_BIT = BIT0;
 static esp_mqtt_client_handle_t client;
 static std::vector<char*> subscriptions;
+static uint8_t setupComplete = 0;
 
 static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event) {
     //esp_mqtt_client_handle_t client = event->client;
@@ -147,17 +148,28 @@ void mqtt_app_start(void) {
 
     client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(client);
+    setupComplete = 1;
 }
 
-void mqtt_publish(const char* topic, const char* message) {
+uint8_t mqtt_publish(const char* topic, const char* message) {
+  if(!setupComplete) {
+    ESP_LOGE(TAG, "mqtt_publish called before mqtt_app_start");
+    return 0;
+  }
   esp_mqtt_client_publish(client, topic, message, 0, 0, 0);
   mqttBuffer_put(topic, strlen(topic), message, strlen(message));
+  return 1;
 }
 
-void mqtt_subscribe(const char* topic) {
-  // Save subscribed topics incase we need to re-connect to broker.
+uint8_t mqtt_subscribe(const char* topic) {
+  if(!setupComplete) {
+    ESP_LOGE(TAG, "mqtt_subscribe called before mqtt_app_start");
+    return 0;
+  }
+  // Save subscribed topics in case we need to re-connect to broker.
   char* persistentTopic = strdup(topic);
   subscriptions.push_back(persistentTopic);
   esp_mqtt_client_subscribe(client, topic, 0);
+  return 1;
 }
 

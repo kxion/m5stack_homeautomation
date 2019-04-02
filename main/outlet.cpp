@@ -36,7 +36,7 @@ void Outlet::addControlSubscription(const char* topic, const uint8_t priority) {
     }
   }
   topicsAtPriority[priority].push_back(strdup(topic));
-  mqtt_subscribe(topic);
+  assert(mqtt_subscribe(topic));
 }
 
 void Outlet::publish(const boolean state) {

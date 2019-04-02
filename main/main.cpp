@@ -29,9 +29,16 @@ mrdunk::HttpRequest* httpRequest;
 
 // The setup routine runs once when M5Stack starts up
 void setup(){
-
   // Initialize the M5Stack object
   M5.begin(true, false);
+
+  // LCD display
+  M5.Lcd.clearDisplay();
+  M5.Lcd.setTextColor(WHITE);
+  M5.Lcd.setTextSize(4);
+  M5.Lcd.setCursor(10, 10);
+  M5.Lcd.print("Loading...\n");
+  setupMenu();
 
   // Networking
   wifi_init();
@@ -40,16 +47,8 @@ void setup(){
   
   mqtt_app_start();
 
-  // LCD display
-  M5.Lcd.clearDisplay();
-  M5.Lcd.setTextColor(WHITE);
-  M5.Lcd.setTextSize(4);
-  M5.Lcd.setCursor(10, 10);
-  M5.Lcd.print("Loading...\n");
-
   temperature = new mrdunk::Temperature("inside/downstairs/livingroom");
   outletBoiler = new mrdunk::OutletKankun(BOILER_TOPIC, false);
-  setupMenu();
 }
 
 // Every 20ms.
