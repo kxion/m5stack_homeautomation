@@ -23,6 +23,7 @@ const static int CONNECTED_BIT = BIT0;
 static esp_mqtt_client_handle_t client;
 static std::vector<char*> subscriptions;
 static uint8_t setupComplete = 0;
+static uint8_t connected = 0;
 
 static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event) {
     //esp_mqtt_client_handle_t client = event->client;
@@ -36,10 +37,12 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event) {
                 ++it) {
               esp_mqtt_client_subscribe(client, *it, 0);
             }
+            connected = 1;
             break;
         case MQTT_EVENT_DISCONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
             mqtt_publish(BROKER_CONNECT_TOPIC, "state:false");
+            connected = 0;
             break;
         case MQTT_EVENT_SUBSCRIBED:
             ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
@@ -156,7 +159,9 @@ uint8_t mqtt_publish(const char* topic, const char* message) {
     ESP_LOGE(TAG, "mqtt_publish called before mqtt_app_start");
     return 0;
   }
-  esp_mqtt_client_publish(client, topic, message, 0, 0, 0);
+  if(connected) {
+    esp_mqtt_client_publish(client, topic, message, 0, 0, 0);
+  }
   mqttBuffer_put(topic, strlen(topic), message, strlen(message));
   return 1;
 }
@@ -169,7 +174,9 @@ uint8_t mqtt_subscribe(const char* topic) {
   // Save subscribed topics in case we need to re-connect to broker.
   char* persistentTopic = strdup(topic);
   subscriptions.push_back(persistentTopic);
-  esp_mqtt_client_subscribe(client, topic, 0);
+  if(connected) {
+    esp_mqtt_client_subscribe(client, topic, 0);
+  }
   return 1;
 }
 

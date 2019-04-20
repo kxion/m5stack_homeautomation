@@ -106,6 +106,8 @@ static void initialize() {
 }
 
 void mqttBuffer_dispalyAll(MapInfo* _mapInfo) {
+  initialize();
+
   xSemaphoreTake(mutex, portMAX_DELAY);
   printf("-----------------\n");
   for(size_t index = 0; index < flatmap_getEntryCount(_mapInfo); index++) {
@@ -158,6 +160,8 @@ static void freeContentCopy(void* content) {
 }
 
 void mqttBuffer_getMatching(const char* match, MapInfo* mapCopy) {
+  initialize();
+
   xSemaphoreTake(mutex, portMAX_DELAY);
 
   *mapCopy = (MapInfo) {

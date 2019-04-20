@@ -34,6 +34,7 @@ class OutletKankun: public Outlet {
   void update();
   boolean getState();
  private:
+  SemaphoreHandle_t mutex;
   HttpRequest* _httpRequestState;
   void setState(const boolean state);
 };

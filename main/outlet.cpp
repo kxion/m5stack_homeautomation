@@ -1,9 +1,14 @@
 #include <M5Stack.h>
 #include <stdint.h>
 #include <string.h>
+#include <freertos/semphr.h>
 
 #include "outlet.h"
 #include "mqtt.h"
+#include "buffer.h"
+extern "C" {
+#include "flatmap.h"
+}
 
 namespace mrdunk{
 
@@ -55,6 +60,9 @@ OutletKankun::OutletKankun(const char* topicBase, const boolean defaultState) :
     Outlet(topicBase, defaultState) {
   _httpRequestState = new mrdunk::HttpRequest("http://192.168.192.8/cgi-bin/relay.cgi?state");
   _httpRequestState->match = {.string = "ON", .result = 0};
+
+  mutex = xSemaphoreCreateMutex();
+  assert(mutex && "Unable to create mutex");
 }
 
 OutletKankun::~OutletKankun() {
@@ -62,16 +70,47 @@ OutletKankun::~OutletKankun() {
 }
 
 void OutletKankun::update() {
+  ESP_LOGD("outletKankun", "OutletKankun::update()");
+  
   _httpRequestState->get();
   publish(_httpRequestState->match.result);
+  
+  ESP_LOGD("!outletKankun", "OutletKankun::update()");
 }
 
 boolean OutletKankun::getState() {
-  update();
-  return _httpRequestState->match.result;
+  xSemaphoreTake(mutex, portMAX_DELAY);
+  if(lastPublishTime == 0 || lastPublishTime + 5000 < millis()) {
+    update();
+  }
+  xSemaphoreGive(mutex);
+
+  // Get a snapshot of the topics we care about from buffer.
+  MapInfo mapCopy;
+  mqttBuffer_getMatching(_topicBase, &mapCopy);
+    
+  size_t switchCount = flatmap_getEntryCount(&mapCopy);
+  if(switchCount == 0) {
+    ESP_LOGE("outletKankun", "No outlet found.");
+    flatmap_free(&mapCopy);
+    return 0;
+  }
+
+  // Presume the first returned entry is the one we want.
+  Entry* entry = flatmap_getByIndex(&mapCopy, 0);
+  Entry subEntry = {
+    .key = (char*)"state",
+    .content = nullptr
+  };
+  Entry* result = flatmap_get((MapInfo*)entry->content, &subEntry);
+  uint32_t state = strtod((char*)result->content, NULL);
+
+  flatmap_free(&mapCopy);
+  return state;
 }
 
 void OutletKankun::setState(const boolean state) {
+  // TODO
 }
 
 } // namespace mrdunk

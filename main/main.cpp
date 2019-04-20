@@ -20,7 +20,7 @@
 #define ARDUINO_RUNNING_CORE 1
 #endif
 
-#define BOILER_TOPIC GLOBAL_ID "/heating/power" 
+#define BOILER_TOPIC GLOBAL_ID "/heating/state" 
 
 
 mrdunk::Temperature* temperature;
@@ -28,7 +28,8 @@ mrdunk::OutletKankun* outletBoiler;
 mrdunk::HttpRequest* httpRequest;
 
 // The setup routine runs once when M5Stack starts up
-void setup(){
+void setup() {
+  esp_log_level_set("phy_init", ESP_LOG_INFO);
   // Initialize the M5Stack object
   M5.begin(true, false);
 
@@ -43,8 +44,6 @@ void setup(){
   // Networking
   wifi_init();
 
-  googleSheet_connect(WEB_URL);
-  
   mqtt_app_start();
 
   temperature = new mrdunk::Temperature("inside/downstairs/livingroom");
@@ -63,9 +62,9 @@ void loopTask(void *pvParameters) {
 }
 
 // Every few seconds. 15 * 1000ms
-void ocasionalLoopTask(void *pvParameters) {
+void loopTask15sec(void *pvParameters) {
+  char currentTemp[20] = "";
   while(1) {
-    char currentTemp[20] = "";
     float temp = temperature->average();
     if(isnan(temp)) {
       snprintf(currentTemp, 20, "Waiting for update.");
@@ -76,6 +75,17 @@ void ocasionalLoopTask(void *pvParameters) {
     setButton1(outletBoiler->getState());
 
     delay(15 * 1000 / portTICK_PERIOD_MS);
+  }
+}
+
+void loopTask30min(void *pvParameters) {
+  while(1) {
+    if(outletBoiler->getState()) {
+      googleSheet_connect(WEB_URL, "?topic=" BOILER_TOPIC "&state=1");
+    } else {
+      googleSheet_connect(WEB_URL, "?topic=" BOILER_TOPIC "&state=0");
+    }
+    delay(30 * 60 * 1000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -95,9 +105,12 @@ extern "C" void app_main() {
   //initArduino();
   setup();
 
-  xTaskCreatePinnedToCore(loopTask, "loopTask", 8192, NULL, 1, NULL, ARDUINO_RUNNING_CORE);
   xTaskCreatePinnedToCore(
-      ocasionalLoopTask, "ocasionalLoopTask", 8192, NULL, 10, NULL, ARDUINO_RUNNING_CORE);
+      loopTask, "loopTask", 8192, NULL, 1, NULL, ARDUINO_RUNNING_CORE);
+  xTaskCreatePinnedToCore(
+      loopTask15sec, "loopTask15sec", 8192, NULL, 10, NULL, ARDUINO_RUNNING_CORE);
+  xTaskCreatePinnedToCore(
+      loopTask30min, "loopTask30min", 8192, NULL, 10, NULL, ARDUINO_RUNNING_CORE);
 
   while(1) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
